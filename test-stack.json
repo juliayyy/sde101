@@ -89,7 +89,7 @@
         "ApiId": {
           "Ref": "CalculationApi"
         },
-        "RouteKey": "$default",
+        "RouteKey": "ANY /plus",
         "Target": {
           "Fn::Join": [
             "/",
@@ -116,6 +116,17 @@
         "Principal": "apigateway.amazonaws.com",
         "SourceArn": {
           "Fn::Sub": "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${CalculationApi}/$default/$default"
+        }
+      }
+    },
+    "MyStage": {
+      "Type": "AWS::ApiGatewayV2::Stage",
+      "Properties": {
+        "StageName": "Prod",
+        "Description": "Prod Stage",
+        "AutoDeploy": true,
+        "ApiId": {
+          "Ref": "CalculationApi"
         }
       }
     }
