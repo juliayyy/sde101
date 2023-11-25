@@ -41,6 +41,46 @@
         ]
       }
     },
+    "Minus": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "ZipFile": "import json\nprint('Loading function')\ndef lambda_handler(event, context):\n    result = float(event['queryStringParameters']['number1']) - float(event['queryStringParameters']['number2'])\n    print (result)\n    return result # Echo back the first key value"
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "MinusRole",
+            "Arn"
+          ]
+        },
+        "Runtime": "python3.11",
+        "Handler": "index.lambda_handler"
+      }
+    },
+    "MinusRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/AWSLambdaExecute"
+        ]
+      }
+    },
     "CalculationApi": {
       "Type": "AWS::ApiGatewayV2::Api",
       "Properties": {
@@ -103,7 +143,62 @@
         }
       }
     },
-    "APIInvokePermission": {
+    "MinusIntegration": {
+      "Type": "AWS::ApiGatewayV2::Integration",
+      "Properties": {
+        "ApiId": {
+          "Ref": "CalculationApi"
+        },
+        "Description": "Lambda Integration",
+        "IntegrationType": "AWS_PROXY",
+        "IntegrationUri": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition"
+              },
+              ":apigateway:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":lambda:path/2015-03-31/functions/",
+              {
+                "Fn::GetAtt": [
+                  "Minus",
+                  "Arn"
+                ]
+              },
+              "/invocations"
+            ]
+          ]
+        },
+        "IntegrationMethod": "POST",
+        "PayloadFormatVersion": "2.0"
+      }
+    },
+    "MinusRoute": {
+      "Type": "AWS::ApiGatewayV2::Route",
+      "Properties": {
+        "ApiId": {
+          "Ref": "CalculationApi"
+        },
+        "RouteKey": "ANY /minus",
+        "Target": {
+          "Fn::Join": [
+            "/",
+            [
+              "integrations",
+              {
+                "Ref": "MinusIntegration"
+              }
+            ]
+          ]
+        }
+      }
+    },
+    "PlusAPIInvokePermission": {
       "Type": "AWS::Lambda::Permission",
       "Properties": {
         "FunctionName": {
@@ -116,6 +211,22 @@
         "Principal": "apigateway.amazonaws.com",
         "SourceArn": {
           "Fn::Sub": "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${CalculationApi}/*/*/plus"
+        }
+      }
+    },
+    "MinusAPIInvokePermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "Minus",
+            "Arn"
+          ]
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Sub": "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${CalculationApi}/*/*/minus"
         }
       }
     },
