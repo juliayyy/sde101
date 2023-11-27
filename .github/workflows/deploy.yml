@@ -30,3 +30,4 @@ jobs:
         with:
           name: calculation
           template: test-stack.json
+          no-fail-on-empty-changeset: "1"
